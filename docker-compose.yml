@@ -1,0 +1,51 @@
+version: '3.8'
+
+services:
+  mysqldb:
+    image: mysql:5.7
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: assurancedb
+    ports:
+      - "3306:3306"
+    volumes:
+      - db:/var/lib/mysql
+  mongodb:
+    image: mongo:4.4
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  assurance:
+    image: assurance:latest
+    restart: on-failure
+    ports:
+      - "8089:8089"
+    depends_on:
+      - mysqldb
+    environment:
+      SPRING_APPLICATION_JSON: '{
+        "spring.datasource.url" : "jdbc:mysql://mysqldb:3306/assurancedb?useUnicode=true&useJDBCCompliantTimezoneShift=true&useLegacyDatetimeCode=false&serverTimezone=UTC&createDatabaseIfNotExist=true",
+        "spring.datasource.username" : "root",
+        "spring.datasource.password" : "root",
+        "spring.jpa.hibernate.ddl-auto" : "update"
+      }'
+    stdin_open: true
+    tty: true
+  client:
+    image: client:latest
+    restart: on-failure
+    ports:
+      - "8090:8090"
+    depends_on:
+        - mongodb
+    environment:
+      SPRING_DATA_MONGODB_URI: mongodb://mongodb:27017/ClientDB
+    stdin_open: true
+    tty: true
+volumes:
+  db:
+  mongo_data:
